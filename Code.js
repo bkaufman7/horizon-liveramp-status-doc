@@ -388,18 +388,21 @@ function syncFromLiveRamp() {
       ]);
     });
     
-    // Write to Raw_Alerts
-    rawSheet.clear();
+    // Write to Raw_Alerts (preserve title row, clear data only)
+    if (rawSheet.getLastRow() > 2) {
+      rawSheet.getRange(3, 1, rawSheet.getLastRow() - 2, rawSheet.getLastColumn()).clear();
+    }
+    
     const rawHeaders = [
       "Date", "Product", "Workflow/Audience Name", "Issue & LR Action",
       "Request to Horizon Team", "Horizon Comment (LR)", "Resolved (LR)",
       "_synced_at", "_thread_key", "_row_hash", "_source_row_number",
       "_first_seen_at", "_last_seen_at"
     ];
-    rawSheet.getRange(1, 1, 1, rawHeaders.length).setValues([rawHeaders]);
+    rawSheet.getRange(2, 1, 1, rawHeaders.length).setValues([rawHeaders]);
     
     if (rawRows.length > 0) {
-      rawSheet.getRange(2, 1, rawRows.length, rawHeaders.length).setValues(rawRows);
+      rawSheet.getRange(3, 1, rawRows.length, rawHeaders.length).setValues(rawRows);
     }
     
     // Update Working_Alerts
