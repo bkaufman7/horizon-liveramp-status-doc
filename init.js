@@ -145,7 +145,7 @@ function setupConfig_(sheet) {
   const rows = [
     ["LiveRamp_Sheet_URL", "https://docs.google.com/spreadsheets/d/1aNSO95dnIEBL5RfN1169TmPvUcXyt6VuCzeeGr6x58I/edit", "Source spreadsheet URL (LiveRamp-owned)"],
     ["LiveRamp_Tab_Name", "Alerts", "Source tab name in LiveRamp sheet"],
-    ["Header_Row_Number", "1", "Header row number (keep as 1 unless needed)"],
+    ["Header_Row_Number", "2", "Header row number in LiveRamp sheet (row with Date, Product, etc.)"],
     ["Timezone", "America/New_York", "Timezone for timestamps and triggers"],
     ["Daily_Email_Time", "07:30", "HH:MM (24h) time for morning email"],
     ["Auto_Push_Time", "23:00", "HH:MM (24h) time for end-of-day auto push"],
