@@ -61,7 +61,10 @@ function reorderSheets_(ss, orderedNames) {
   // Safe if some names are missing (should not happen).
   orderedNames.forEach((name, idx) => {
     const sh = ss.getSheetByName(name);
-    if (sh) ss.setActiveSheet(sh).moveActiveSheet(idx + 1);
+    if (sh) {
+      ss.setActiveSheet(sh);
+      ss.moveActiveSheet(idx + 1);
+    }
   });
 }
 
