@@ -295,7 +295,11 @@ function getConfig_() {
   const data = sheet.getRange(3, 1, sheet.getLastRow() - 2, 2).getValues();
   const config = {};
   data.forEach(row => {
-    if (row[0]) config[String(row[0])] = row[1];
+    if (row[0]) {
+      const key = String(row[0]).trim();
+      const value = row[1];
+      config[key] = value;
+    }
   });
   return config;
 }
@@ -745,8 +749,11 @@ function pushUpdatesToLiveRamp() {
     const config = getConfig_();
     
     // Check if writeback is enabled
-    if (config.Enable_Writeback_To_LR !== "TRUE") {
-      Logger.log("Writeback disabled in Config");
+    const writebackEnabled = String(config.Enable_Writeback_To_LR || "").toUpperCase();
+    Logger.log("Enable_Writeback_To_LR value: '" + config.Enable_Writeback_To_LR + "' (type: " + typeof config.Enable_Writeback_To_LR + ")");
+    
+    if (writebackEnabled !== "TRUE") {
+      Logger.log("Writeback disabled in Config. Value: " + writebackEnabled);
       return;
     }
     
