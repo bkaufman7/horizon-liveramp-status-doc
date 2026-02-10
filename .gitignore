@@ -1,0 +1,16 @@
+# Google Apps Script
+.clasp.json
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+~$*
+*.tmp

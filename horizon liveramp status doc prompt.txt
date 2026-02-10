@@ -1,0 +1,185 @@
+You are writing a complete Google Apps Script automation for a Google Sheet that I own (destination sheet). The goal is to mirror a LiveRamp-owned Google Sheet tab named "Alerts" into my sheet, let Horizon add structured updates in our sheet, then push updates back into LiveRamp column F (Horizon Comment) in bulk either manually (menu) or automatically at 11:00 PM ET weekdays. The script must also generate and maintain two README tabs describing the system: README_Technical and README_UserGuide.
+
+IMPORTANT CONTEXT AND CONSTRAINTS
+- LiveRamp source spreadsheet URL: https://docs.google.com/spreadsheets/d/1aNSO95dnIEBL5RfN1169TmPvUcXyt6VuCzeeGr6x58I/edit
+- Source tab name: Alerts
+- Source tab column layout is fixed in Alerts:
+  A Date
+  B Product
+  C Workflow/Audience Name
+  D Issue & LR Action
+  E Request to Horizon Team
+  F Horizon Comment  (Horizon writes here, append-only logic)
+  G Resolved (checkbox)  (we will NOT update this automatically; focus only on F)
+- I have edit access in LiveRamp for columns F and G only.
+- I do NOT want to overwrite existing text in LiveRamp Horizon Comment. If there is existing text, append an update with a line break separator and a timestamp, always in ET, 12-hour format.
+- Append format in LiveRamp column F must be exactly:
+  <MM/DD/YYYY h:mm AM/PM ET>
+  Horizon: <message>
+  (Then a blank line before the next appended block when appending again)
+- Do not push duplicate updates. If the last pushed message text is the same as the new outgoing message text (ignoring timestamps and whitespace), skip.
+- Manual push is via a custom menu. Auto push runs at 23:00 (11 PM) ET weekdays as a safety net.
+- New/Updated/Ongoing logic:
+  - "New" means new since last sync: a thread key that did not exist in the previous sync snapshot.
+  - "Updated" means the same thread key exists, but the row content hash changed since last sync (LiveRamp edited something such as column E, or other fields).
+  - "Ongoing" are items still present and not marked resolved in our working view.
+  - Do NOT treat an updated row as "new" again.
+  - Highlight updated rows in our sheet (Working_Alerts) to indicate LiveRamp changes since last sync.
+- Deduping/Repeats:
+  - Treat duplicates as one line for working purposes, but keep visibility of repeats across days.
+  - If two rows share the same thread key but have different Date values, keep them as separate rows but grouped/sorted together in Working_Alerts (do not merge into a single row).
+- Post-resolution LiveRamp updates:
+  - If we have marked something "READY TO BE RESOLVED" (our internal status) and LiveRamp later updates column E or other LR fields, the item should remain resolved in our view but must be flagged as "LR updated after resolution", and optionally included in the next email in a Follow-up section. Use the "B + optional C" interpretation: stay resolved, show a flag, and optionally call it out.
+- Drop-down requirements (in our Working_Alerts):
+  - A dropdown for Horizon update templates that will be used to build the outgoing message, combined with free text notes (Option 3B).
+  - IMPORTANT: The dropdown options must NOT be hardcoded. They must be sourced dynamically from a new tab named "Templates" in the destination sheet so I can add/modify templates without code changes.
+  - Separate local control to mark "READY TO BE RESOLVED". When selected:
+    - The outgoing message should be appended to LR column F.
+    - The corresponding row in our sheet should be highlighted light green to show Horizon considers it cleared.
+    - We do NOT update LR column G, only column F.
+- Email requirements:
+  - Daily email is sent in the morning (7–8 AM ET, configurable via Config), weekdays only.
+  - Email recipients are stored in a Recipients tab and can be modified any time.
+  - Email contains HTML tables for New, Updated, and Ongoing items (yes, all three).
+  - No "Resolved" table needed in the email, but keep resolved/audit capability in the sheet.
+  - Email must include two labeled links: one to our Horizon internal sheet and one to the LiveRamp-owned sheet. Label them clearly as "Horizon Internal Sheet" and "LiveRamp Source Sheet".
+  - The email should be "advanced": color-coded rows and categorized. Implement color-coding in the HTML using inline styles. Also implement conditional formatting in the sheet when reasonable.
+  - Avoid em dashes in the email copy. Use commas or parentheses instead.
+
+DESTINATION SHEET STRUCTURE (tabs must exist or be created if missing)
+- Config: stores settings. Assume labels in column A, values in column B. Required keys:
+  LiveRamp_Sheet_URL, LiveRamp_Tab_Name, Header_Row_Number, Timezone, Daily_Email_Time, Auto_Push_Time, Weekdays_Only, Email_Subject_Prefix, Ready_To_Be_Resolved_Label, Enable_Writeback_To_LR, LR_Columns_Fixed.
+- Templates: stores dropdown template prompts for Horizon updates. This is user-editable.
+  - Columns: Template Label, Active, Category, Notes
+  - Only rows where Active=TRUE and Template Label is non-empty should be used in the Working_Alerts dropdown.
+  - Seed the tab with a sensible starter set including "READY TO BE RESOLVED".
+  - Provide a menu action "Refresh Template Dropdowns" that re-applies dropdown validation from the Templates tab to Working_Alerts.
+- Recipients: Name, Email, Active
+- Raw_Alerts: exact mirror of LiveRamp Alerts, overwritten on each sync, plus helper columns:
+  _synced_at, _thread_key, _row_hash, _source_row_number, _first_seen_at, _last_seen_at
+- Working_Alerts: the human working layer that includes raw fields plus Horizon control fields:
+  HMI_Group (derived: New/Updated/Ongoing/Resolved)
+  HMI_Update_Template (dropdown sourced from Templates tab)
+  HMI_Update_FreeText (free text)
+  HMI_Composed_Update (computed preview of what will be pushed)
+  HMI_Push_Ready (checkbox)
+  HMI_Last_Pushed_At
+  HMI_Last_Pushed_Text
+  HMI_Ready_To_Be_Resolved (checkbox or dropdown that includes READY TO BE RESOLVED)
+  HMI_LR_Updated_After_Resolution (flag)
+  HMI_Notes_Internal (optional)
+- Email_Log: Sent At, Subject, Counts, Recipients, Status, Error, Links
+- Push_Log: Pushed At, #Rows pushed, Details, Errors
+- README_Technical and README_UserGuide: filled by script and updated when config changes or script version changes.
+
+FUNCTIONAL REQUIREMENTS
+1) Installable triggers and menus
+- onOpen creates a custom menu "HMI LiveRamp" with:
+  - Refresh from LiveRamp
+  - Build Email Preview (no send)
+  - Send Email Now
+  - Refresh + Send Email Now
+  - Push Updates to LiveRamp Now
+  - Refresh + Push Updates Now
+  - Refresh Template Dropdowns
+- Time-driven trigger for:
+  - Daily morning email at Config!Daily_Email_Time (weekdays only if configured)
+  - Auto push at Config!Auto_Push_Time (weekdays only if configured)
+- Provide a setup function to install triggers safely (idempotent), and a diagnostics function.
+
+2) Sync engine (LiveRamp -> Raw_Alerts -> Working_Alerts)
+- Read the LiveRamp Alerts tab.
+- Detect the header row either via Config Header_Row_Number or by scanning for the expected headers:
+  Date, Product, Workflow/Audience Name, Issue & LR Action, Request to Horizon Team, Horizon Comment, Resolved
+- Pull all rows below header.
+- Write to Raw_Alerts as a full refresh.
+- Compute:
+  - _thread_key = stable hash of Product + Workflow/Audience Name + Issue & LR Action + Request to Horizon Team (exclude Date)
+  - _row_hash = hash of all source fields A:G (include Date and Horizon Comment and Resolved for change detection)
+  - _source_row_number = the row number in the LR sheet (needed for writeback)
+  - _first_seen_at and _last_seen_at tracked across syncs (do not lose history)
+- Update Working_Alerts:
+  - Maintain rows keyed by (_thread_key + _source_row_number) or a stable composite that supports multiple days of the same thread.
+  - Group/sort by thread_key then Date then source_row_number.
+  - Determine "New" vs "Updated" vs "Ongoing" based on comparison to the previous sync snapshot:
+    - New: not previously seen in Working_Alerts at all.
+    - Updated: existed before, but _row_hash changed since last sync.
+    - Ongoing: existed and not updated in this sync.
+  - If a row is in our resolved state (READY TO BE RESOLVED true) and LR updates later, do not revert to New. Set HMI_LR_Updated_After_Resolution flag and classify it as Resolved with follow-up flag.
+- At the end of sync, call Refresh Template Dropdowns so the Working_Alerts dropdown stays current.
+
+3) Horizon composed update and push gating
+- In Working_Alerts, the HMI_Update_Template dropdown must source active templates from Templates tab (Active=TRUE).
+- HMI_Update_FreeText is optional.
+- HMI_Composed_Update should build:
+  - If both template and free text exist: "<template>, <free text>"
+  - If only template: "<template>"
+  - If only free text: "<free text>"
+- Only push rows where:
+  - Enable_Writeback_To_LR is TRUE
+  - HMI_Push_Ready is TRUE OR template equals READY TO BE RESOLVED (still requires push ready unless specified otherwise; default requires HMI_Push_Ready true)
+  - HMI_Composed_Update is not empty
+  - The composed text differs from HMI_Last_Pushed_Text (normalized)
+- On successful push:
+  - Append to LiveRamp column F at the matching source row, preserving existing text.
+  - Update HMI_Last_Pushed_At and HMI_Last_Pushed_Text in Working_Alerts.
+  - Log to Push_Log.
+
+4) LiveRamp append logic (column F only)
+- Read existing LR cell F for that row.
+- Normalize existing value.
+- Append a new block as:
+  blank line
+  <timestamp ET 12-hour>
+  Horizon: <message>
+- Do not append if last pushed message text is same as new message text (ignore timestamps and extra whitespace).
+- If READY TO BE RESOLVED is selected:
+  - Append as usual
+  - Highlight the row in Working_Alerts light green (and optionally set a "cleared" flag field)
+  - Do NOT update LR column G
+
+5) Visual highlighting in Working_Alerts
+- Updated since last sync: highlight row light yellow.
+- New since last sync: highlight row light blue.
+- Ready to be resolved / cleared: highlight row light green.
+- LR updated after resolution: highlight row light orange or add an icon/flag column.
+
+6) Email builder (advanced HTML)
+- Build HTML email with:
+  - A short header, date, and the two labeled links.
+  - Three sections with tables: New, Updated, Ongoing.
+  - Each table includes key columns: Date, Product, Workflow/Audience Name, Issue & LR Action, Request to Horizon Team, Horizon Comment (from LR), plus Horizon fields: HMI_Update_Template, HMI_Update_FreeText, HMI_Last_Pushed_At (optional).
+  - Color-code table rows to match the statuses (New/Updated/Ongoing). Use inline style background colors.
+- Subject line example:
+  "<Email_Subject_Prefix> | YYYY-MM-DD"
+- Recipients pulled from Recipients tab where Active is TRUE.
+- Log sends to Email_Log including counts.
+
+7) Reliability and safety
+- Use LockService to prevent concurrent runs.
+- Implement robust error handling and logging.
+- Avoid excessive API calls. Batch reads and writes where possible.
+- Provide a "dry run" mode for email preview and push preview.
+
+8) Documentation (README tabs)
+- README_Technical: explain architecture, tab schemas, triggers, key functions, and how matching and hashing works.
+- README_UserGuide: explain daily workflow for Horizon:
+  - Refresh (or rely on schedule)
+  - Review New/Updated/Ongoing
+  - Select update template and enter free text as needed
+  - Mark HMI_Push_Ready for items to push
+  - Use menu to Push Updates Now (or rely on 11 PM safety net)
+  - The morning email behavior
+  - How to edit Templates tab to add/remove dropdown prompts
+  - Expectations for LiveRamp inputs and how we communicate back (Horizon Comment column usage)
+- Include a small troubleshooting section (permissions, trigger install, missing headers, etc).
+
+DELIVERABLES
+- Provide full Apps Script code in a single file (Code.gs) that can be pasted into Apps Script editor, plus any helper files if necessary but default to single file.
+- Include clear instructions at top of the code for required one-time setup:
+  - Create tabs (or script auto-creates)
+  - Fill Config keys
+  - Run setup() to install triggers
+- Code must be clean, commented, and production-ready.
+
+Now generate the complete Apps Script implementation according to the above.
