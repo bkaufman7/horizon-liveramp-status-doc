@@ -86,6 +86,7 @@ function onOpen() {
         .addItem("Run Setup (Install Triggers)", "setup")
         .addItem("Run Diagnostics", "diagnostics")
         .addItem("Update README Tabs", "updateReadmeTabs")
+        .addItem("⚠️ RESET ALL TABS (Delete & Recreate)", "resetAllTabs")
     )
     .addToUi();
 }
@@ -1424,6 +1425,53 @@ function updateTechnicalReadme_(ss) {
   sheet.getRange("A1").setFontWeight("bold").setFontSize(14);
   sheet.getRange("A:A").setWrap(true);
   sheet.setColumnWidth(1, 800);
+}
+
+function resetAllTabs() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    "⚠️ RESET ALL TABS",
+    "This will DELETE all tabs (Config, Recipients, Raw_Alerts, Working_Alerts, etc.) and recreate them with fresh formatting.\n\n" +
+    "You will lose any data in these tabs!\n\n" +
+    "Are you sure you want to continue?",
+    ui.ButtonSet.YES_NO
+  );
+  
+  if (response !== ui.Button.YES) {
+    ui.alert("Reset cancelled.");
+    return;
+  }
+  
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = ss.getSheets();
+    
+    // Delete all sheets except the first one (we need at least one)
+    for (let i = sheets.length - 1; i >= 0; i--) {
+      if (i > 0) {
+        ss.deleteSheet(sheets[i]);
+      }
+    }
+    
+    // Rename first sheet temporarily
+    sheets[0].setName("_temp_");
+    
+    // Now call the init function from init.js
+    if (typeof initHmiLiveRampUi === 'function') {
+      initHmiLiveRampUi();
+    } else {
+      throw new Error("initHmiLiveRampUi function not found. Make sure init.js is loaded.");
+    }
+    
+    // Delete temp sheet
+    const tempSheet = ss.getSheetByName("_temp_");
+    if (tempSheet) ss.deleteSheet(tempSheet);
+    
+    ui.alert("✓ Reset complete! All tabs have been recreated.");
+  } catch (err) {
+    ui.alert("Error during reset: " + err.message);
+    sendErrorEmail("resetAllTabs", err);
+  }
 }
 
 function updateUserGuideReadme_(ss) {

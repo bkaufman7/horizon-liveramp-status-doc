@@ -156,17 +156,20 @@ function setupConfig_(sheet) {
     ["LR_Columns_Fixed", "TRUE", "TRUE if LR columns are fixed as A:G in Alerts"],
   ];
 
-  sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  // Write data starting at row 3 (row 1 is title, row 2 is header)
+  sheet.getRange(3, 1, rows.length, 3).setValues(rows);
 
-  // Labels styling
-  sheet.getRange("A2:A").setFontWeight("bold").setFontColor("#111827");
-  sheet.getRange("C2:C").setFontColor("#6B7280").setWrap(true);
-
-  // Header styling for key/value/notes
+  // Header styling for key/value/notes in row 2
   sheet.getRange("A2:C2").setBackground("#E5E7EB").setFontWeight("bold");
   sheet.getRange("A2").setValue("Key");
   sheet.getRange("B2").setValue("Value");
   sheet.getRange("C2").setValue("Notes");
+
+  // Labels styling (keys in column A)
+  sheet.getRange(3, 1, rows.length, 1).setFontWeight("bold").setFontColor("#111827");
+  
+  // Notes styling (column C)
+  sheet.getRange(3, 3, rows.length, 1).setFontColor("#6B7280").setWrap(true);
 
   // Freeze header row 2 (the table header), keep title row 1 frozen as well
   sheet.setFrozenRows(2);
@@ -174,19 +177,15 @@ function setupConfig_(sheet) {
   // Column widths
   setColumnWidths_(sheet, [220, 520, 520]);
 
-  // Data validation for booleans
+  // Data validation for booleans - apply ONLY to specific keys
   const boolRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["TRUE", "FALSE"], true)
     .setAllowInvalid(false)
     .build();
 
-  // Apply to Weekdays_Only, Enable_Writeback_To_LR, LR_Columns_Fixed (rows are dynamic but we know positions)
-  // Weekdays_Only row index = 2 + 6 = 8? Actually rows begin at 2 (title row 1, header row 2), data begins row 3.
-  // Our data starts at row 3. Let's find by key.
-  const dataRange = sheet.getRange(3, 1, rows.length, 2);
-  const data = dataRange.getValues();
-  for (let r = 0; r < data.length; r++) {
-    const key = String(data[r][0] || "");
+  // Apply boolean validation only to Weekdays_Only, Enable_Writeback_To_LR, LR_Columns_Fixed
+  for (let r = 0; r < rows.length; r++) {
+    const key = String(rows[r][0] || "");
     if (["Weekdays_Only", "Enable_Writeback_To_LR", "LR_Columns_Fixed"].includes(key)) {
       sheet.getRange(3 + r, 2).setDataValidation(boolRule);
     }
