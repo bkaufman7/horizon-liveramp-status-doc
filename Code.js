@@ -311,11 +311,25 @@ function syncFromLiveRamp() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const config = getConfig_();
     
-    // Open LiveRamp sheet
-    const lrUrl = config.LiveRamp_Sheet_URL;
+    // Validate and open LiveRamp sheet
+    const lrUrl = String(config.LiveRamp_Sheet_URL || "").trim();
+    if (!lrUrl) {
+      throw new Error("LiveRamp_Sheet_URL is not configured in Config tab");
+    }
+    if (!lrUrl.startsWith("https://docs.google.com/spreadsheets/")) {
+      throw new Error("Invalid LiveRamp_Sheet_URL format. Must be a Google Sheets URL.");
+    }
+    
     const lrTabName = config.LiveRamp_Tab_Name || "Alerts";
-    const lrSs = SpreadsheetApp.openByUrl(lrUrl);
-    const lrSheet = lrSs.getSheetByName(lrTabName);
+    
+    let lrSs, lrSheet;
+    try {
+      lrSs = SpreadsheetApp.openByUrl(lrUrl);
+      lrSheet = lrSs.getSheetByName(lrTabName);
+    } catch (e) {
+      throw new Error("Cannot access LiveRamp sheet. Check URL and permissions: " + e.message);
+    }
+    
     if (!lrSheet) throw new Error("LiveRamp tab '" + lrTabName + "' not found");
     
     // Find header row
