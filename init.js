@@ -440,14 +440,8 @@ function applyWorkingAlertsConditionalFormatting_(sheet, lastCol) {
       .build()
   );
 
-  // Push ready TRUE -> bold the row slightly by changing font color darker (Sheets API is limited, so do font weight)
-  rules.push(
-    SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied(`=$L3=TRUE`)
-      .setFontWeight("bold")
-      .setRanges([dataRange])
-      .build()
-  );
+  // Note: setFontWeight is not supported in conditional formatting
+  // Users can manually apply bold formatting if needed, or we handle it in the main Code.js
 
   sheet.setConditionalFormatRules(rules);
 }
