@@ -373,10 +373,15 @@ function setupWorkingAlerts_(sheet) {
 
   // Default formula for composed update (row-wise) in column K (11)
   // K = IF(AND(I not blank, J not blank), I & ", " & J, IF(I not blank, I, J))
-  // Put in row 3 as an example and fill down a bunch of rows for convenience.
-  const composedFormula = `=IF(AND($I3<>"",$J3<>""),$I3&", "&$J3,IF($I3<>"",$I3,$J3))`;
-  sheet.getRange("K3").setFormula(composedFormula);
-  sheet.getRange("K3:K502").fillDown();
+  // Apply formula to multiple rows
+  const startRow = 3;
+  const numRows = 500;
+  const formulas = [];
+  for (let i = 0; i < numRows; i++) {
+    const rowNum = startRow + i;
+    formulas.push([`=IF(AND($I${rowNum}<>"",$J${rowNum}<>""),$I${rowNum}&", "&$J${rowNum},IF($I${rowNum}<>"",$I${rowNum},$J${rowNum}))`]);
+  }
+  sheet.getRange(startRow, 11, numRows, 1).setFormulas(formulas);
 
   // Apply banding
   applyBanding_(sheet, 2, 1, 600, headers.length);
