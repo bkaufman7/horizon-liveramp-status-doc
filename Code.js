@@ -1013,48 +1013,48 @@ function buildEmailHtml_(preview) {
 <style>
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 8px;
-  line-height: 1.3;
+  font-size: 12px;
+  line-height: 1.4;
   color: #111827;
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 12px;
+  padding: 16px;
 }
 h1 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  margin: 0 0 4px 0;
+  margin: 0 0 6px 0;
   color: #111827;
 }
 .date {
-  font-size: 8px;
+  font-size: 12px;
   color: #6B7280;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 .links {
-  margin-bottom: 12px;
-  padding: 6px;
+  margin-bottom: 16px;
+  padding: 8px;
   background: #F3F4F6;
   border-radius: 4px;
 }
 .links a {
   color: #1D4ED8;
   text-decoration: none;
-  margin-right: 16px;
+  margin-right: 20px;
   font-weight: 500;
-  font-size: 7px;
+  font-size: 11px;
 }
 .links a:hover {
   text-decoration: underline;
 }
 .section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .section-title {
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
-  margin: 8px 0 4px 0;
-  padding-bottom: 3px;
+  margin: 12px 0 8px 0;
+  padding-bottom: 6px;
   border-bottom: 2px solid #E5E7EB;
 }
 .section-title.new { 
@@ -1069,60 +1069,42 @@ h1 {
   border-bottom-color: #6B7280;
   color: #374151;
 }
-.alert-row {
-  margin-bottom: 8px;
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
   border: 1px solid #D1D5DB;
-  border-radius: 4px;
-  padding: 6px;
-  line-height: 1.2;
 }
-.alert-row.new { 
-  background: #DBEAFE;
-  border-color: #3B82F6;
-}
-.alert-row.updated { 
-  background: #FEF9C3;
-  border-color: #F59E0B;
-}
-.alert-row.ongoing { 
-  background: #FAFAFA;
-  border-color: #E5E7EB;
-}
-.row-header {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 4px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(0,0,0,0.1);
-}
-.row-field {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 4px;
-  margin-bottom: 3px;
-}
-.row-label {
+th {
+  background: #F9FAFB;
+  padding: 8px;
+  text-align: left;
   font-weight: 600;
+  font-size: 12px;
+  border: 1px solid #D1D5DB;
   color: #374151;
-  word-break: break-word;
 }
-.row-value {
-  word-break: break-word;
-  white-space: pre-wrap;
+td {
+  padding: 8px;
+  border: 1px solid #D1D5DB;
+  font-size: 12px;
+  vertical-align: top;
 }
+tr.new-row { background: #DBEAFE; }
+tr.updated-row { background: #FEF9C3; }
+tr.ongoing-row { background: #FAFAFA; }
 .no-items {
   color: #6B7280;
   font-style: italic;
-  padding: 6px;
-  font-size: 8px;
+  padding: 8px;
+  font-size: 12px;
 }
 .footer {
-  margin-top: 16px;
-  padding-top: 8px;
+  margin-top: 20px;
+  padding-top: 12px;
   border-top: 1px solid #E5E7EB;
   color: #6B7280;
-  font-size: 7px;
+  font-size: 11px;
 }
 </style>
 </head>
@@ -1163,6 +1145,23 @@ function buildEmailSection_(title, rows, sectionClass) {
   if (rows.length === 0) {
     html += `<div class="no-items">No ${title.toLowerCase()} at this time.</div>`;
   } else {
+    html += `
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Product</th>
+<th>Workflow/Audience</th>
+<th>Issue & LR Action</th>
+<th>Request to Horizon</th>
+<th>LR Comment</th>
+<th>Horizon Update</th>
+</tr>
+</thead>
+<tbody>`;
+    
+    const rowClass = sectionClass === "new" ? "new-row" : (sectionClass === "updated" ? "updated-row" : "ongoing-row");
+    
     rows.forEach(row => {
       const date = formatDateForEmail_(row[0]);
       const product = escapeHtml_(row[1]);
@@ -1184,33 +1183,18 @@ function buildEmailSection_(title, rows, sectionClass) {
       horizonUpdate = escapeHtml_(horizonUpdate);
       
       html += `
-<div class="alert-row ${sectionClass}">
-  <div class="row-header">
-    <div><span class="row-label">Date:</span> <span class="row-value">${date}</span></div>
-    <div><span class="row-label">Product:</span> <span class="row-value">${product}</span></div>
-  </div>
-  <div class="row-field">
-    <span class="row-label">Workflow:</span>
-    <span class="row-value">${workflow}</span>
-  </div>
-  <div class="row-field">
-    <span class="row-label">Issue & Action:</span>
-    <span class="row-value">${issue}</span>
-  </div>
-  <div class="row-field">
-    <span class="row-label">Request:</span>
-    <span class="row-value">${request}</span>
-  </div>
-  <div class="row-field">
-    <span class="row-label">LR Comment:</span>
-    <span class="row-value">${lrComment}</span>
-  </div>
-  <div class="row-field">
-    <span class="row-label">Horizon Update:</span>
-    <span class="row-value"><strong>${horizonUpdate}</strong></span>
-  </div>
-</div>`;
+<tr class="${rowClass}">
+<td>${date}</td>
+<td>${product}</td>
+<td>${workflow}</td>
+<td>${issue}</td>
+<td>${request}</td>
+<td>${lrComment}</td>
+<td><strong>${horizonUpdate}</strong></td>
+</tr>`;
     });
+    
+    html += `</tbody></table>`;
   }
   
   html += `</div>`;
