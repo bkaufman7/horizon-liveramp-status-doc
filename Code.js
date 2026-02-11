@@ -1016,7 +1016,7 @@ body {
   font-size: 12px;
   line-height: 1.4;
   color: #111827;
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 16px;
 }
@@ -1069,30 +1069,46 @@ h1 {
   border-bottom-color: #6B7280;
   color: #374151;
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 8px;
-  border: 1px solid #D1D5DB;
+.alert-card {
+  margin-bottom: 12px;
+  border: 2px solid;
+  border-radius: 6px;
+  padding: 10px;
+  line-height: 1.3;
 }
-th {
-  background: #F9FAFB;
-  padding: 8px;
-  text-align: left;
+.alert-card.new { 
+  background: #DBEAFE;
+  border-color: #3B82F6;
+}
+.alert-card.updated { 
+  background: #FEF9C3;
+  border-color: #F59E0B;
+}
+.alert-card.ongoing { 
+  background: #FAFAFA;
+  border-color: #D1D5DB;
+}
+.card-field {
+  margin-bottom: 6px;
+}
+.card-label {
   font-weight: 600;
-  font-size: 12px;
-  border: 1px solid #D1D5DB;
   color: #374151;
+  display: inline;
+  margin-right: 4px;
 }
-td {
-  padding: 8px;
-  border: 1px solid #D1D5DB;
-  font-size: 12px;
-  vertical-align: top;
+.card-value {
+  display: inline;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
-tr.new-row { background: #DBEAFE; }
-tr.updated-row { background: #FEF9C3; }
-tr.ongoing-row { background: #FAFAFA; }
+.horizon-update {
+  font-weight: 600;
+  color: #065F46;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
 .no-items {
   color: #6B7280;
   font-style: italic;
@@ -1145,23 +1161,6 @@ function buildEmailSection_(title, rows, sectionClass) {
   if (rows.length === 0) {
     html += `<div class="no-items">No ${title.toLowerCase()} at this time.</div>`;
   } else {
-    html += `
-<table>
-<thead>
-<tr>
-<th>Date</th>
-<th>Product</th>
-<th>Workflow/Audience</th>
-<th>Issue & LR Action</th>
-<th>Request to Horizon</th>
-<th>LR Comment</th>
-<th>Horizon Update</th>
-</tr>
-</thead>
-<tbody>`;
-    
-    const rowClass = sectionClass === "new" ? "new-row" : (sectionClass === "updated" ? "updated-row" : "ongoing-row");
-    
     rows.forEach(row => {
       const date = formatDateForEmail_(row[0]);
       const product = escapeHtml_(row[1]);
@@ -1183,18 +1182,16 @@ function buildEmailSection_(title, rows, sectionClass) {
       horizonUpdate = escapeHtml_(horizonUpdate);
       
       html += `
-<tr class="${rowClass}">
-<td>${date}</td>
-<td>${product}</td>
-<td>${workflow}</td>
-<td>${issue}</td>
-<td>${request}</td>
-<td>${lrComment}</td>
-<td><strong>${horizonUpdate}</strong></td>
-</tr>`;
+<div class="alert-card ${sectionClass}">
+  <div class="card-field"><span class="card-label">Date:</span> <span class="card-value">${date}</span></div>
+  <div class="card-field"><span class="card-label">Product:</span> <span class="card-value">${product}</span></div>
+  <div class="card-field"><span class="card-label">Workflow:</span> <span class="card-value">${workflow}</span></div>
+  <div class="card-field"><span class="card-label">Issue & Action:</span> <span class="card-value">${issue}</span></div>
+  <div class="card-field"><span class="card-label">Request:</span> <span class="card-value">${request}</span></div>
+  <div class="card-field"><span class="card-label">LR Comment:</span> <span class="card-value">${lrComment}</span></div>
+  <div class="card-field horizon-update"><span class="card-label">Horizon Update:</span> <span class="card-value">${horizonUpdate}</span></div>
+</div>`;
     });
-    
-    html += `</tbody></table>`;
   }
   
   html += `</div>`;
