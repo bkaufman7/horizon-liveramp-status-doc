@@ -1192,21 +1192,20 @@ function buildEmailSection_(title, rows, sectionClass) {
       }
       horizonUpdate = escapeHtml_(horizonUpdate);
       
-      const cardStyle = `style="background-color: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 6px; padding: 10px; margin-bottom: 12px;"`;
-      const fieldStyle = `style="margin-bottom: 6px; line-height: 1.3;"`;
-      const labelStyle = `style="font-weight: 600; color: #374151;"`;
-      const horizonStyle = `style="font-weight: 600; color: #065F46; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.1);"`;
+      const cardStyle = `style="background-color: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 6px; margin-bottom: 12px; width: 100%; border-collapse: collapse;"`;
       
       html += `
-<div ${cardStyle}>
-  <div ${fieldStyle}><span ${labelStyle}>Date:</span> ${date}</div>
-  <div ${fieldStyle}><span ${labelStyle}>Product:</span> ${product}</div>
-  <div ${fieldStyle}><span ${labelStyle}>Workflow:</span> ${workflow}</div>
-  <div ${fieldStyle}><span ${labelStyle}>Issue & Action:</span> ${issue}</div>
-  <div ${fieldStyle}><span ${labelStyle}>Request:</span> ${request}</div>
-  <div ${fieldStyle}><span ${labelStyle}>LR Comment:</span> ${lrComment}</div>
-  <div ${horizonStyle}><span ${labelStyle}>Horizon Update:</span> ${horizonUpdate}</div>
-</div>`;
+<table ${cardStyle}>
+<tr><td style="padding: 12px; font-size: 12px; line-height: 1.5; color: #111827;">
+<strong style="color: #374151;">Date:</strong> ${date}<br>
+<strong style="color: #374151;">Product:</strong> ${product}<br>
+<strong style="color: #374151;">Workflow:</strong> ${workflow}<br>
+<strong style="color: #374151;">Issue & Action:</strong> ${issue}<br>
+<strong style="color: #374151;">Request:</strong> ${request}<br>
+<strong style="color: #374151;">LR Comment:</strong> ${lrComment}<br>
+<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.15);"><strong style="color: #065F46;">Horizon Update:</strong> ${horizonUpdate}</div>
+</td></tr>
+</table>`;
     });
   }
   
