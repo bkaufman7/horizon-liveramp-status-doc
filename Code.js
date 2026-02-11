@@ -1161,6 +1161,17 @@ function buildEmailSection_(title, rows, sectionClass) {
   if (rows.length === 0) {
     html += `<div class="no-items">No ${title.toLowerCase()} at this time.</div>`;
   } else {
+    let bgColor = "#FAFAFA";
+    let borderColor = "#D1D5DB";
+    
+    if (sectionClass === "new") {
+      bgColor = "#DBEAFE";
+      borderColor = "#3B82F6";
+    } else if (sectionClass === "updated") {
+      bgColor = "#FEF9C3";
+      borderColor = "#F59E0B";
+    }
+    
     rows.forEach(row => {
       const date = formatDateForEmail_(row[0]);
       const product = escapeHtml_(row[1]);
@@ -1181,15 +1192,20 @@ function buildEmailSection_(title, rows, sectionClass) {
       }
       horizonUpdate = escapeHtml_(horizonUpdate);
       
+      const cardStyle = `style="background-color: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 6px; padding: 10px; margin-bottom: 12px;"`;
+      const fieldStyle = `style="margin-bottom: 6px; line-height: 1.3;"`;
+      const labelStyle = `style="font-weight: 600; color: #374151;"`;
+      const horizonStyle = `style="font-weight: 600; color: #065F46; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.1);"`;
+      
       html += `
-<div class="alert-card ${sectionClass}">
-  <div class="card-field"><span class="card-label">Date:</span> <span class="card-value">${date}</span></div>
-  <div class="card-field"><span class="card-label">Product:</span> <span class="card-value">${product}</span></div>
-  <div class="card-field"><span class="card-label">Workflow:</span> <span class="card-value">${workflow}</span></div>
-  <div class="card-field"><span class="card-label">Issue & Action:</span> <span class="card-value">${issue}</span></div>
-  <div class="card-field"><span class="card-label">Request:</span> <span class="card-value">${request}</span></div>
-  <div class="card-field"><span class="card-label">LR Comment:</span> <span class="card-value">${lrComment}</span></div>
-  <div class="card-field horizon-update"><span class="card-label">Horizon Update:</span> <span class="card-value">${horizonUpdate}</span></div>
+<div ${cardStyle}>
+  <div ${fieldStyle}><span ${labelStyle}>Date:</span> ${date}</div>
+  <div ${fieldStyle}><span ${labelStyle}>Product:</span> ${product}</div>
+  <div ${fieldStyle}><span ${labelStyle}>Workflow:</span> ${workflow}</div>
+  <div ${fieldStyle}><span ${labelStyle}>Issue & Action:</span> ${issue}</div>
+  <div ${fieldStyle}><span ${labelStyle}>Request:</span> ${request}</div>
+  <div ${fieldStyle}><span ${labelStyle}>LR Comment:</span> ${lrComment}</div>
+  <div ${horizonStyle}><span ${labelStyle}>Horizon Update:</span> ${horizonUpdate}</div>
 </div>`;
     });
   }
